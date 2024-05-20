@@ -9,9 +9,11 @@ import * as turf from '@turf/turf';
 import { Feature, FeatureCollection } from 'geojson';
 
 import { stopSelector } from 'selectors';
+import GlobalLoader from 'components/GlobalLoader';
 
 const MapViewer = () => {
   const { stops } = useSelector(stopSelector);
+  const [globalLoading, setGlobalLoading] = useState<boolean>(false);
   const mapRef = useRef(null);
   const [mapView, setMapView] = useState<MapView | undefined>(undefined);
 
@@ -20,50 +22,9 @@ const MapViewer = () => {
       /**
        * Initialize application
        */
-      const stopGeoJSON: FeatureCollection = {
-        type: 'FeatureCollection',
-        features: [],
-      };
-      stops.forEach(stopItem => {
-        const newFeature: Feature = {
-          type: 'Feature',
-          geometry: {
-            type: 'Point',
-            coordinates: [stopItem.Longitude, stopItem.Latitude],
-          },
-          properties: { ...stopItem },
-        };
-        stopGeoJSON.features.push(newFeature);
-      });
-      const blob = new Blob([JSON.stringify(stopGeoJSON)], {
-        type: 'application/json',
-      });
-
-      // URL reference to the blob
-      const url = URL.createObjectURL(blob);
-
-      const stopRenderer: any = {
-        type: 'simple',
-        symbol: {
-          type: 'simple-marker',
-          color: 'orange',
-          outline: {
-            color: 'white',
-          },
-        },
-        // visualVariables: [],
-      };
-
-      const stopLayer = new GeoJSONLayer({
-        id: 'stop-layer',
-        url,
-        renderer: stopRenderer,
-        // popupTemplate: stopPopupTemplate,
-      });
-
+      setGlobalLoading(true);
       const webmap = new Map({
-        basemap: 'dark-gray-vector',
-        layers: [stopLayer],
+        basemap: 'hybrid',
       });
 
       const view = new MapView({
@@ -79,31 +40,81 @@ const MapViewer = () => {
 
       view.popup.defaultPopupTemplateEnabled = true;
 
-      const bbox = turf.bbox(stopGeoJSON);
+      view.when(() => {
+        const stopGeoJSON: FeatureCollection = {
+          type: 'FeatureCollection',
+          features: [],
+        };
+        stops.forEach(stopItem => {
+          const newFeature: Feature = {
+            type: 'Feature',
+            geometry: {
+              type: 'Point',
+              coordinates: [stopItem.Longitude, stopItem.Latitude],
+            },
+            properties: { ...stopItem },
+          };
+          stopGeoJSON.features.push(newFeature);
+        });
+        const blob = new Blob([JSON.stringify(stopGeoJSON)], {
+          type: 'application/json',
+        });
 
-      const extent = new Extent({
-        xmin: bbox[0],
-        ymin: bbox[1],
-        xmax: bbox[2],
-        ymax: bbox[3],
-        spatialReference: {
-          wkid: 4326,
-        },
+        // URL reference to the blob
+        const url = URL.createObjectURL(blob);
+
+        const stopRenderer: any = {
+          type: 'simple',
+          symbol: {
+            type: 'simple-marker',
+            color: 'orange',
+            outline: {
+              color: 'white',
+            },
+          },
+          // visualVariables: [],
+        };
+
+        const stopLayer = new GeoJSONLayer({
+          id: 'stop-layer',
+          url,
+          renderer: stopRenderer,
+          // popupTemplate: stopPopupTemplate,
+        });
+
+        view.map.add(stopLayer);
+
+        stopLayer.when(() => {
+          const bbox = turf.bbox(stopGeoJSON);
+          const extent = new Extent({
+            xmin: bbox[0],
+            ymin: bbox[1],
+            xmax: bbox[2],
+            ymax: bbox[3],
+            spatialReference: {
+              wkid: 4326,
+            },
+          });
+          // view.extent = extent;
+          view.goTo(extent, { duration: 2400 });
+          setGlobalLoading(false);
+          setMapView(view);
+        });
       });
-      view.extent = extent;
-
-      setMapView(view);
     }
 
     return () => mapView && mapView.destroy();
   }, []);
 
   return (
-    <div
-      id="mapContainer"
-      ref={mapRef}
-      style={{ height: '100vh', width: '100%' }}
-    />
+    <>
+      {globalLoading && <GlobalLoader />}
+      <div
+        id="mapContainer"
+        ref={mapRef}
+        style={{ height: '100vh', width: '100%' }}
+      />
+    </>
   );
 };
 
