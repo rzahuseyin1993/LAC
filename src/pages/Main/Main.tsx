@@ -1,5 +1,7 @@
+import MapViewer from './MapViewer';
+
 const Main = () => {
-  return <div>Main</div>;
+  return <MapViewer />;
 };
 
 export default Main;
