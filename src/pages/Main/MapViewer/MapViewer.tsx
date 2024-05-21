@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { useSelector } from 'react-redux';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
@@ -8,20 +7,17 @@ import Extent from '@arcgis/core/geometry/Extent';
 import * as turf from '@turf/turf';
 import { Feature, FeatureCollection } from 'geojson';
 
-import { stopSelector } from 'selectors';
 import GlobalLoader from 'components/GlobalLoader';
 
+import stops from './stop.json';
+
 const MapViewer = () => {
-  const { stops } = useSelector(stopSelector);
   const [globalLoading, setGlobalLoading] = useState<boolean>(false);
   const mapRef = useRef(null);
   const [mapView, setMapView] = useState<MapView | undefined>(undefined);
 
   useEffect(() => {
     if (mapRef.current) {
-      /**
-       * Initialize application
-       */
       setGlobalLoading(true);
       const webmap = new Map({
         basemap: 'hybrid',
@@ -50,7 +46,7 @@ const MapViewer = () => {
             type: 'Feature',
             geometry: {
               type: 'Point',
-              coordinates: [stopItem.Longitude, stopItem.Latitude],
+              coordinates: [stopItem.Latitude, stopItem.Longitude],
             },
             properties: { ...stopItem },
           };
@@ -77,13 +73,12 @@ const MapViewer = () => {
 
         const stopLayer = new GeoJSONLayer({
           id: 'stop-layer',
+          title: 'Stop Layer',
           url,
           renderer: stopRenderer,
           // popupTemplate: stopPopupTemplate,
         });
-
         view.map.add(stopLayer);
-
         stopLayer.when(() => {
           const bbox = turf.bbox(stopGeoJSON);
           const extent = new Extent({
@@ -97,12 +92,14 @@ const MapViewer = () => {
           });
           // view.extent = extent;
           view.goTo(extent, { duration: 2400 });
-          setGlobalLoading(false);
-          setMapView(view);
+
+          setTimeout(() => {
+            setGlobalLoading(false);
+            setMapView(view);
+          }, 5000);
         });
       });
     }
-
     return () => mapView && mapView.destroy();
   }, []);
 
