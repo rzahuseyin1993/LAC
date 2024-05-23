@@ -1,7 +1,7 @@
 import { AuthState } from './auth/AuthState';
-import { StopState } from './stop/StopState';
+import { AssetState } from './asset/AssetState';
 
 export type RootState = {
   auth: AuthState;
-  stop: StopState;
+  asset: AssetState;
 };

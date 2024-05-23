@@ -1,1 +1,1 @@
-export const API_URL = 'https://lac.eztrak.net';
+export const API_URL = 'https://lacapi.eztrak.net/api';

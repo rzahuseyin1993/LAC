@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
@@ -8,21 +9,22 @@ import * as turf from '@turf/turf';
 import { Feature, FeatureCollection } from 'geojson';
 
 import GlobalLoader from 'components/GlobalLoader';
-
-import stops from './stop.json';
+import { fetchAssets } from 'store/asset';
+import { assetSelector } from 'selectors';
+import { ApiState } from 'types/ApiState';
 
 const MapViewer = () => {
+  const dispatch = useDispatch<any>();
+  const { assets, service, status } = useSelector(assetSelector);
   const [globalLoading, setGlobalLoading] = useState<boolean>(false);
   const mapRef = useRef(null);
   const [mapView, setMapView] = useState<MapView | undefined>(undefined);
 
-  useEffect(() => {
+  const loadMap = () => {
     if (mapRef.current) {
-      setGlobalLoading(true);
       const webmap = new Map({
         basemap: 'hybrid',
       });
-
       const view = new MapView({
         container: mapRef.current, // The id or node representing the DOM element containing the view.
         map: webmap, // An instance of a Map object to display in the view.
@@ -34,35 +36,36 @@ const MapViewer = () => {
         },
       });
 
-      view.popup.defaultPopupTemplateEnabled = true;
+      //   view.popup.defaultPopupTemplateEnabled = true;
 
       view.when(() => {
-        const stopGeoJSON: FeatureCollection = {
+        const assetGeoJSON: FeatureCollection = {
           type: 'FeatureCollection',
           features: [],
         };
-        stops.forEach(stopItem => {
+        assets.forEach(assetItem => {
           const newFeature: Feature = {
             type: 'Feature',
             geometry: {
               type: 'Point',
-              coordinates: [stopItem.Latitude, stopItem.Longitude],
+              coordinates: [assetItem.longitude, assetItem.latitude],
             },
-            properties: { ...stopItem },
+            properties: { ...assetItem },
           };
-          stopGeoJSON.features.push(newFeature);
+          assetGeoJSON.features.push(newFeature);
         });
-        const blob = new Blob([JSON.stringify(stopGeoJSON)], {
+        const blob = new Blob([JSON.stringify(assetGeoJSON)], {
           type: 'application/json',
         });
 
         // URL reference to the blob
         const url = URL.createObjectURL(blob);
 
-        const stopRenderer: any = {
+        const assetRenderer: any = {
           type: 'simple',
           symbol: {
             type: 'simple-marker',
+            size: 8,
             color: 'orange',
             outline: {
               color: 'white',
@@ -71,16 +74,58 @@ const MapViewer = () => {
           // visualVariables: [],
         };
 
-        const stopLayer = new GeoJSONLayer({
-          id: 'stop-layer',
-          title: 'Stop Layer',
+        const assetPopupTemplate = {
+          title: 'Asset({assetId})',
+          content: [
+            {
+              type: 'fields',
+              fieldInfos: [
+                {
+                  fieldName: 'assetId',
+                  label: 'Asset Id',
+                },
+                {
+                  fieldName: 'description',
+                  label: 'Description',
+                },
+                {
+                  fieldName: 'assetClass',
+                  label: 'Asset Class',
+                },
+                {
+                  fieldName: 'assetType',
+                  label: 'Asset Type',
+                },
+                {
+                  fieldName: 'condition',
+                  label: 'Condition',
+                },
+                {
+                  fieldName: 'poleId',
+                  label: 'Pole Id',
+                },
+                {
+                  fieldName: 'activeStatus',
+                  label: 'Active Status',
+                },
+                {
+                  fieldName: 'formattedStatus',
+                  label: 'Formatted Status',
+                },
+              ],
+            },
+          ],
+        };
+
+        const assetLayer = new GeoJSONLayer({
+          id: 'asset-layer',
           url,
-          renderer: stopRenderer,
-          // popupTemplate: stopPopupTemplate,
+          renderer: assetRenderer,
+          popupTemplate: assetPopupTemplate,
         });
-        view.map.add(stopLayer);
-        stopLayer.when(() => {
-          const bbox = turf.bbox(stopGeoJSON);
+        view.map.add(assetLayer);
+        assetLayer.load().then(() => {
+          const bbox = turf.bbox(assetGeoJSON);
           const extent = new Extent({
             xmin: bbox[0],
             ymin: bbox[1],
@@ -100,6 +145,19 @@ const MapViewer = () => {
         });
       });
     }
+  };
+
+  useEffect(() => {
+    if (service === 'fetchAssets') {
+      if (status === ApiState.fulfilled) {
+        loadMap();
+      }
+    }
+  }, [service, status]);
+
+  useEffect(() => {
+    setGlobalLoading(true);
+    dispatch(fetchAssets());
     return () => mapView && mapView.destroy();
   }, []);
 
@@ -109,7 +167,7 @@ const MapViewer = () => {
       <div
         id="mapContainer"
         ref={mapRef}
-        style={{ height: '100vh', width: '100%' }}
+        style={{ height: '100%', width: '100%' }}
       />
     </>
   );
