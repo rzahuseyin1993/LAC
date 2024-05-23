@@ -3,9 +3,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
-// import SimpleRenderer from '@arcgis/core/renderers/SimpleRenderer';
-import Extent from '@arcgis/core/geometry/Extent';
-import * as turf from '@turf/turf';
 import { Feature, FeatureCollection } from 'geojson';
 
 import GlobalLoader from 'components/GlobalLoader';
@@ -125,19 +122,8 @@ const MapViewer = () => {
         });
         view.map.add(assetLayer);
         assetLayer.load().then(() => {
-          const bbox = turf.bbox(assetGeoJSON);
-          const extent = new Extent({
-            xmin: bbox[0],
-            ymin: bbox[1],
-            xmax: bbox[2],
-            ymax: bbox[3],
-            spatialReference: {
-              wkid: 4326,
-            },
-          });
           // view.extent = extent;
-          view.goTo(extent, { duration: 2400 });
-
+          view.goTo(assetLayer.fullExtent, { duration: 2400 });
           setTimeout(() => {
             setGlobalLoading(false);
             setMapView(view);
