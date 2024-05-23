@@ -75,7 +75,7 @@ const MapViewer = () => {
         };
 
         const assetPopupTemplate = {
-          title: 'Asset({assetId})',
+          title: 'Asset ({assetId})',
           content: [
             {
               type: 'fields',
