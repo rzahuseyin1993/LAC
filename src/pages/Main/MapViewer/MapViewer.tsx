@@ -3,6 +3,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
+import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
+import Expand from '@arcgis/core/widgets/Expand';
+import Zoom from '@arcgis/core/widgets/Zoom';
+import Home from '@arcgis/core/widgets/Home';
+import Search from '@arcgis/core/widgets/Search';
+// import Legend from '@arcgis/core/widgets/Legend';
+import ScaleBar from '@arcgis/core/widgets/ScaleBar';
 import { Feature, FeatureCollection } from 'geojson';
 
 import GlobalLoader from 'components/GlobalLoader';
@@ -31,9 +38,33 @@ const MapViewer = () => {
         spatialReference: {
           wkid: 3857,
         },
+        ui: {
+          components: [],
+        },
       });
+      const zoom = new Zoom({
+        view: view,
+      });
+      const home = new Home({
+        view: view,
+      });
+      const basemapGallery = new BasemapGallery({
+        view: view,
+        container: document.createElement('div'),
+      });
+      const bgExpand = new Expand({
+        view: view,
+        content: basemapGallery,
+        expandIcon: 'basemap',
+      });
+      const search = new Search({ view: view, icon: 'search' });
+      // const legend = new Legend({ view: view });
+      const scaleBar = new ScaleBar({ view: view });
 
-      //   view.popup.defaultPopupTemplateEnabled = true;
+      view.ui.add([zoom, home, bgExpand], { position: 'top-left' });
+      view.ui.add(search, { position: 'top-right' });
+      // view.ui.add(legend, { position: 'bottom-left' });
+      view.ui.add(scaleBar, { position: 'bottom-right' });
 
       view.when(() => {
         const assetGeoJSON: FeatureCollection = {
