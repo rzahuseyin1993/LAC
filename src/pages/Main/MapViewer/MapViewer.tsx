@@ -2,20 +2,29 @@ import { useState, useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
+import GroupLayer from '@arcgis/core/layers/GroupLayer';
 import GeoJSONLayer from '@arcgis/core/layers/GeoJSONLayer';
 import BasemapGallery from '@arcgis/core/widgets/BasemapGallery';
 import Expand from '@arcgis/core/widgets/Expand';
 import Zoom from '@arcgis/core/widgets/Zoom';
 import Home from '@arcgis/core/widgets/Home';
 import Search from '@arcgis/core/widgets/Search';
-// import Legend from '@arcgis/core/widgets/Legend';
+import Legend from '@arcgis/core/widgets/Legend';
 import ScaleBar from '@arcgis/core/widgets/ScaleBar';
-import { Feature, FeatureCollection } from 'geojson';
+import LayerList from '@arcgis/core/widgets/LayerList';
+import Compass from '@arcgis/core/widgets/Compass';
+
+import { Feature } from 'geojson';
 
 import GlobalLoader from 'components/GlobalLoader';
 import { fetchAssets } from 'store/asset';
 import { assetSelector } from 'selectors';
 import { ApiState } from 'types/ApiState';
+import {
+  assetSimpleRenderer,
+  assetConditionRenderer,
+  assetPopupTemplate,
+} from 'consts';
 
 const MapViewer = () => {
   const dispatch = useDispatch<any>();
@@ -27,7 +36,7 @@ const MapViewer = () => {
   const loadMap = () => {
     if (mapRef.current) {
       const webmap = new Map({
-        basemap: 'hybrid',
+        basemap: 'satellite',
       });
       const view = new MapView({
         container: mapRef.current, // The id or node representing the DOM element containing the view.
@@ -47,6 +56,15 @@ const MapViewer = () => {
       });
       const home = new Home({
         view: view,
+        goToOverride: view => {
+          const assetAllLayer = view.map.findLayerById('asset-all-layer');
+          if (assetAllLayer) {
+            view.goTo(assetAllLayer.fullExtent);
+          }
+        },
+      });
+      const compass = new Compass({
+        view: view,
       });
       const basemapGallery = new BasemapGallery({
         view: view,
@@ -55,126 +73,140 @@ const MapViewer = () => {
       const bgExpand = new Expand({
         view: view,
         content: basemapGallery,
-        expandIcon: 'basemap',
+        icon: 'basemap',
+        expandTooltip: 'Base Map',
       });
       const search = new Search({ view: view, icon: 'search' });
-      // const legend = new Legend({ view: view });
+      const legend = new Legend({ view: view });
       const scaleBar = new ScaleBar({ view: view });
-
-      view.ui.add([zoom, home, bgExpand], { position: 'top-left' });
-      view.ui.add(search, { position: 'top-right' });
-      // view.ui.add(legend, { position: 'bottom-left' });
+      const layerList = new LayerList({
+        view: view,
+      });
+      const layerListExpand = new Expand({
+        view: view,
+        content: layerList,
+        icon: 'layers',
+        expandTooltip: 'Layers',
+      });
+      view.ui.add([search, zoom, home, compass], { position: 'top-right' });
+      view.ui.add(legend, { position: 'bottom-left' });
       view.ui.add(scaleBar, { position: 'bottom-right' });
+      view.ui.add([bgExpand, layerListExpand], { position: 'top-left' });
 
       view.when(() => {
-        const assetGeoJSON: FeatureCollection = {
-          type: 'FeatureCollection',
-          features: [],
-        };
-        assets.forEach(assetItem => {
-          const newFeature: Feature = {
-            type: 'Feature',
-            geometry: {
-              type: 'Point',
-              coordinates: [assetItem.longitude, assetItem.latitude],
-            },
-            properties: { ...assetItem },
-          };
-          assetGeoJSON.features.push(newFeature);
-        });
-        const blob = new Blob([JSON.stringify(assetGeoJSON)], {
-          type: 'application/json',
-        });
-
-        // URL reference to the blob
-        const url = URL.createObjectURL(blob);
-
-        const assetRenderer: any = {
-          type: 'simple',
-          symbol: {
-            type: 'simple-marker',
-            size: 8,
-            color: 'orange',
-            outline: {
-              color: 'white',
-            },
-          },
-          // visualVariables: [],
-        };
-
-        const assetPopupTemplate = {
-          title: 'Asset ({assetId})',
-          content: [
-            {
-              type: 'fields',
-              fieldInfos: [
-                {
-                  fieldName: 'assetId',
-                  label: 'Asset Id',
-                },
-                {
-                  fieldName: 'description',
-                  label: 'Description',
-                },
-                {
-                  fieldName: 'assetClass',
-                  label: 'Asset Class',
-                },
-                {
-                  fieldName: 'assetType',
-                  label: 'Asset Type',
-                },
-                {
-                  fieldName: 'condition',
-                  label: 'Condition',
-                },
-                {
-                  fieldName: 'poleId',
-                  label: 'Pole Id',
-                },
-                {
-                  fieldName: 'activeStatus',
-                  label: 'Active Status',
-                },
-                {
-                  fieldName: 'formattedStatus',
-                  label: 'Formatted Status',
-                },
-              ],
-            },
-          ],
-        };
-
-        const assetLayer = new GeoJSONLayer({
-          id: 'asset-layer',
-          url,
-          renderer: assetRenderer,
-          popupTemplate: assetPopupTemplate,
-        });
-        view.map.add(assetLayer);
-        assetLayer.load().then(() => {
-          // view.extent = extent;
-          view.goTo(assetLayer.fullExtent, { duration: 2400 });
-          setTimeout(() => {
-            setGlobalLoading(false);
-            setMapView(view);
-          }, 5000);
-        });
+        setMapView(view);
+        dispatch(fetchAssets());
       });
     }
   };
 
+  const loadAssetGroupLayer = () => {
+    const allFeatures: Feature[] = [];
+    assets.forEach(assetItem => {
+      const newFeature: Feature = {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [assetItem.longitude, assetItem.latitude],
+        },
+        properties: { ...assetItem },
+      };
+      allFeatures.push(newFeature);
+    });
+
+    const assetAllLayer = new GeoJSONLayer({
+      id: 'asset-all-layer',
+      url: URL.createObjectURL(
+        new Blob(
+          [
+            JSON.stringify({
+              type: 'FeatureCollection',
+              features: allFeatures,
+            }),
+          ],
+          {
+            type: 'application/json',
+          },
+        ),
+      ),
+      title: 'Assets All',
+      renderer: assetSimpleRenderer,
+      popupTemplate: assetPopupTemplate,
+    });
+
+    const stopLayer = new GeoJSONLayer({
+      id: 'asset-stop-layer',
+      url: URL.createObjectURL(
+        new Blob(
+          [
+            JSON.stringify({
+              type: 'FeatureCollection',
+              features: allFeatures.filter(
+                feature => feature.properties?.assetType === 'Stop Sign',
+              ),
+            }),
+          ],
+          {
+            type: 'application/json',
+          },
+        ),
+      ),
+      title: 'Stop Sign',
+      renderer: assetConditionRenderer,
+      popupTemplate: assetPopupTemplate,
+    });
+
+    const schoolLayer = new GeoJSONLayer({
+      id: 'asset-school-layer',
+      url: URL.createObjectURL(
+        new Blob(
+          [
+            JSON.stringify({
+              type: 'FeatureCollection',
+              features: allFeatures.filter(
+                feature => feature.properties?.assetType === 'School Sign',
+              ),
+            }),
+          ],
+          {
+            type: 'application/json',
+          },
+        ),
+      ),
+      title: 'School Sign',
+      renderer: assetConditionRenderer,
+      popupTemplate: assetPopupTemplate,
+    });
+
+    const assetGroupLayer = new GroupLayer({
+      id: 'asset-group-layer',
+      title: 'Assets',
+      visible: true,
+      visibilityMode: 'exclusive',
+      layers: [schoolLayer, stopLayer, assetAllLayer],
+      opacity: 1,
+    });
+
+    mapView?.map.add(assetGroupLayer);
+    assetAllLayer.load().then(() => {
+      // view.extent = extent;
+      mapView?.goTo(assetAllLayer.fullExtent, { duration: 2400 });
+      setGlobalLoading(false);
+    });
+  };
+
   useEffect(() => {
-    if (service === 'fetchAssets') {
+    if (mapView && service === 'fetchAssets') {
       if (status === ApiState.fulfilled) {
-        loadMap();
+        loadAssetGroupLayer();
       }
     }
-  }, [service, status]);
+  }, [mapView, service, status]);
 
   useEffect(() => {
     setGlobalLoading(true);
-    dispatch(fetchAssets());
+    loadMap();
+
     return () => mapView && mapView.destroy();
   }, []);
 
