@@ -60,6 +60,7 @@
   },
   "devDependencies": {
     "@types/geojson": "^7946.0.14",
+    "@types/react-material-ui-form-validator": "^2.1.4",
     "@types/react-redux": "^7.1.33",
     "@types/react-router-dom": "^5.3.3",
     "@typescript-eslint/eslint-plugin": "^7.9.0",

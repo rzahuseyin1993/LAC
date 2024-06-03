@@ -40,7 +40,8 @@ appAxios.interceptors.request.use(requestInterceptor, error => {
 
 appAxios.interceptors.response.use(
   (response: AxiosResponse) => {
-    if (response.data.error) {
+    //@ts-ignore
+    if (response.data.errors) {
       return Promise.reject(response.data);
     }
     return response.data;

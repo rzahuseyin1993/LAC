@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useContext } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { IconButton } from '@mui/material';
+import { AddLocationAlt as AddLocationAltIcon } from '@mui/icons-material';
 import Map from '@arcgis/core/Map';
 import MapView from '@arcgis/core/views/MapView';
 import GroupLayer from '@arcgis/core/layers/GroupLayer';
@@ -13,7 +15,6 @@ import Legend from '@arcgis/core/widgets/Legend';
 import ScaleBar from '@arcgis/core/widgets/ScaleBar';
 import LayerList from '@arcgis/core/widgets/LayerList';
 import Compass from '@arcgis/core/widgets/Compass';
-
 import { Feature } from 'geojson';
 
 import GlobalLoader from 'components/GlobalLoader';
@@ -25,13 +26,50 @@ import {
   assetConditionRenderer,
   assetPopupTemplate,
 } from 'consts';
+import { MainContext } from '../Main';
+
+let tempCreateAssetToggle: boolean = false;
 
 const MapViewer = () => {
   const dispatch = useDispatch<any>();
   const { assets, service, status } = useSelector(assetSelector);
-  const [globalLoading, setGlobalLoading] = useState<boolean>(false);
+  const { globalLoading, setGlobalLoading } = useContext(MainContext);
   const mapRef = useRef(null);
   const [mapView, setMapView] = useState<MapView | undefined>(undefined);
+  const [isCreateAssetToggle, setCreateAssetToggle] = useState<boolean>(false);
+
+  useEffect(() => {
+    tempCreateAssetToggle = isCreateAssetToggle;
+    if (mapView) {
+      if (isCreateAssetToggle) {
+        mapView.container.style.cursor = 'crosshair';
+      } else {
+        mapView.container.style.cursor = 'auto';
+      }
+    }
+  }, [isCreateAssetToggle]);
+
+  const handleCreateAssetButtonClick = () => {
+    setCreateAssetToggle(!isCreateAssetToggle);
+  };
+
+  const handleMapViewClick = (event: __esri.ViewClickEvent) => {
+    if (tempCreateAssetToggle) {
+      const customEvent = new CustomEvent('createAssetModal', {
+        lat: event.mapPoint.latitude,
+        lng: event.mapPoint.longitude,
+      } as any);
+      window.dispatchEvent(customEvent);
+      setCreateAssetToggle(false);
+      // dispatch(
+      //   setNewLoaction({
+      //     longitude: event.mapPoint.longitude,
+      //     latitude: event.mapPoint.latitude,
+      //   }),
+      // );
+      // setModalView('createAsset');
+    }
+  };
 
   const loadMap = () => {
     if (mapRef.current) {
@@ -189,9 +227,12 @@ const MapViewer = () => {
 
     mapView?.map.add(assetGroupLayer);
     assetAllLayer.load().then(() => {
-      // view.extent = extent;
-      mapView?.goTo(assetAllLayer.fullExtent, { duration: 2400 });
       setGlobalLoading(false);
+      if (mapView) {
+        // view.extent = extent;
+        mapView?.goTo(assetAllLayer.fullExtent, { duration: 2400 });
+        mapView.on('click', handleMapViewClick);
+      }
     });
   };
 
@@ -218,6 +259,17 @@ const MapViewer = () => {
         ref={mapRef}
         style={{ height: '100%', width: '100%' }}
       />
+      <div style={{ position: 'absolute', top: 120, left: 15, zIndex: 9 }}>
+        <IconButton
+          title="Create a new asset"
+          sx={{ backgroundColor: 'white', padding: '5px' }}
+          onClick={handleCreateAssetButtonClick}
+        >
+          <AddLocationAltIcon
+            sx={{ color: isCreateAssetToggle ? 'orange' : '#777' }}
+          />
+        </IconButton>
+      </div>
     </>
   );
 };
