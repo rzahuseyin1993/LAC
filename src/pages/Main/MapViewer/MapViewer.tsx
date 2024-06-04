@@ -56,9 +56,11 @@ const MapViewer = () => {
   const handleMapViewClick = (event: __esri.ViewClickEvent) => {
     if (tempCreateAssetToggle) {
       const customEvent = new CustomEvent('createAssetModal', {
-        lat: event.mapPoint.latitude,
-        lng: event.mapPoint.longitude,
-      } as any);
+        detail: {
+          lat: event.mapPoint.latitude,
+          lng: event.mapPoint.longitude,
+        },
+      });
       window.dispatchEvent(customEvent);
       setCreateAssetToggle(false);
       // dispatch(
