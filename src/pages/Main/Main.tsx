@@ -4,7 +4,7 @@ import MapViewer from './MapViewer';
 import ModalView from './ModalView';
 import SnackBar from './SnackBar';
 
-type MainContextPros = {
+export type MainContextPros = {
   globalLoading: boolean;
   setGlobalLoading: (newValue: boolean) => void;
   modalView: string | undefined;

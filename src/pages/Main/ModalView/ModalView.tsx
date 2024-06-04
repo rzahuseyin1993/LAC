@@ -2,7 +2,6 @@ import { useContext, useEffect, useState } from 'react';
 import { Dialog } from '@mui/material';
 
 import { MainContext } from '../Main';
-
 import CreateAsset from './CreateAsset';
 
 const ModalView = () => {

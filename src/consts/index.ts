@@ -86,11 +86,15 @@ export const assetConditionRenderer: any = {
 };
 
 export const assetPopupTemplate = {
-  title: 'Asset ({assetId})',
+  title: 'Asset ({id})',
   content: [
     {
       type: 'fields',
       fieldInfos: [
+        {
+          fieldName: 'id',
+          label: 'Id',
+        },
         {
           fieldName: 'assetId',
           label: 'Asset Id',

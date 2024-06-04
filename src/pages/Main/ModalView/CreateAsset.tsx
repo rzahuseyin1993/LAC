@@ -16,7 +16,6 @@ import { ApiState } from 'types/ApiState';
 import { TextValidator } from 'components/TextValidator';
 import { fetchAssetTypes, createAsset, fetchConditions } from 'store/asset';
 import { assetSelector } from 'selectors';
-
 import { MainContext } from '../Main';
 
 const CreateAsset = () => {

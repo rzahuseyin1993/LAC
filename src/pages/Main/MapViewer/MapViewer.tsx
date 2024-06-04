@@ -18,13 +18,13 @@ import Compass from '@arcgis/core/widgets/Compass';
 import { Feature } from 'geojson';
 
 import GlobalLoader from 'components/GlobalLoader';
-import { fetchAssets } from 'store/asset';
+import { fetchAssets, setAssets } from 'store/asset';
 import { assetSelector } from 'selectors';
 import { ApiState } from 'types/ApiState';
 import {
   assetSimpleRenderer,
   assetConditionRenderer,
-  assetPopupTemplate,
+  // assetPopupTemplate,
 } from 'consts';
 import { MainContext } from '../Main';
 
@@ -53,6 +53,81 @@ const MapViewer = () => {
     setCreateAssetToggle(!isCreateAssetToggle);
   };
 
+  const handleAssetDeleted = (event: any) => {
+    console.log(event);
+  };
+
+  const handleAssetUpdated = (event: any) => {
+    console.log(event);
+  };
+
+  const handleAssetCreated = (event: any) => {
+    dispatch(setAssets([...assets, event.detail]));
+    if (mapView) {
+      // find layer
+      // create new feature
+      // add new feature to layer
+      // const assetAllLayer = mapView.map.findLayerById('asset-all-layer');
+      // 'esri/widgets/Feature';
+      // "@arcgis/core/widgets/Feature.js"
+      // // Create graphic
+      // let graphic = new Graphic({
+      //   geometry: view.center,
+      //   popupTemplate: {
+      //     content: [
+      //       {
+      //         // add popupTemplate content
+      //       },
+      //     ],
+      //   },
+      // });
+      // // map and spatialReference must be set for Arcade
+      // // expressions to execute and display content
+      // let feature = new Feature({
+      //   graphic: graphic,
+      //   map: map,
+      //   spatialReference: spatialReference,
+      // });
+      // const attributes = {};
+      // attributes['Description'] = 'This is the description';
+      // attributes['Address'] = '380 New York St';
+      // // Date.now() returns number of milliseconds elapsed
+      // // since 1 January 1970 00:00:00 UTC.
+      // attributes['Report_Date'] = Date.now();
+      // const addFeature = new Graphic({
+      //   geometry: geometry,
+      //   attributes: attributes,
+      // });
+      // const deleteFeature = {
+      //   objectId: [467],
+      // };
+      // if (assetAllLayer) {
+      //   assetAllLayer.applyEdits({
+      //     addFeatures: [addFeature],
+      //     // deleteFeatures: [deleteFeature],
+      //   });
+      // }
+    }
+  };
+
+  const handleMapViewHover = (event: __esri.ViewPointerMoveEvent) => {
+    if (!tempCreateAssetToggle) {
+      const screenPoint = {
+        x: event.x,
+        y: event.y,
+      };
+      if (mapView) {
+        mapView.hitTest(screenPoint).then(response => {
+          if (response.results.length > 0) {
+            mapView.container.style.cursor = 'pointer';
+          } else {
+            mapView.container.style.cursor = 'default';
+          }
+        });
+      }
+    }
+  };
+
   const handleMapViewClick = (event: __esri.ViewClickEvent) => {
     if (tempCreateAssetToggle) {
       const customEvent = new CustomEvent('createAssetModal', {
@@ -70,6 +145,26 @@ const MapViewer = () => {
       //   }),
       // );
       // setModalView('createAsset');
+    } else {
+      const screenPoint = {
+        x: event.x,
+        y: event.y,
+      };
+      if (mapView) {
+        mapView.hitTest(screenPoint).then(response => {
+          if (response.results.length > 0) {
+            //@ts-ignore
+            const graphic = response.results[0].graphic;
+            const attributes = graphic.attributes;
+            const customEvent = new CustomEvent('detailAssetModal', {
+              detail: {
+                id: attributes.id,
+              },
+            });
+            window.dispatchEvent(customEvent);
+          }
+        });
+      }
     }
   };
 
@@ -171,7 +266,8 @@ const MapViewer = () => {
       ),
       title: 'Assets All',
       renderer: assetSimpleRenderer,
-      popupTemplate: assetPopupTemplate,
+      outFields: ['*'],
+      // popupTemplate: assetPopupTemplate,
     });
 
     const stopLayer = new GeoJSONLayer({
@@ -193,7 +289,8 @@ const MapViewer = () => {
       ),
       title: 'Stop Sign',
       renderer: assetConditionRenderer,
-      popupTemplate: assetPopupTemplate,
+      outFields: ['*'],
+      // popupTemplate: assetPopupTemplate,
     });
 
     const schoolLayer = new GeoJSONLayer({
@@ -215,7 +312,8 @@ const MapViewer = () => {
       ),
       title: 'School Sign',
       renderer: assetConditionRenderer,
-      popupTemplate: assetPopupTemplate,
+      outFields: ['*'],
+      // popupTemplate: assetPopupTemplate,
     });
 
     const assetGroupLayer = new GroupLayer({
@@ -234,6 +332,7 @@ const MapViewer = () => {
         // view.extent = extent;
         mapView?.goTo(assetAllLayer.fullExtent, { duration: 2400 });
         mapView.on('click', handleMapViewClick);
+        mapView.on('pointer-move', handleMapViewHover);
       }
     });
   };
@@ -250,7 +349,17 @@ const MapViewer = () => {
     setGlobalLoading(true);
     loadMap();
 
-    return () => mapView && mapView.destroy();
+    window.addEventListener('assetCreated', handleAssetCreated);
+    window.addEventListener('assetUpdated', handleAssetUpdated);
+    window.addEventListener('assetDeleted', handleAssetDeleted);
+    return () => {
+      window.removeEventListener('assetCreated', handleAssetCreated);
+      window.removeEventListener('assetUpdated', handleAssetUpdated);
+      window.removeEventListener('assetDeleted', handleAssetDeleted);
+      if (mapView) {
+        mapView.destroy();
+      }
+    };
   }, []);
 
   return (

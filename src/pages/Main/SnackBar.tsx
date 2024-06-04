@@ -1,6 +1,5 @@
 import { useContext } from 'react';
 import { Snackbar, Alert, SnackbarCloseReason } from '@mui/material';
-
 import { MainContext } from './Main';
 
 const SnackBar = () => {
