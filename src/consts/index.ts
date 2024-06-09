@@ -1,17 +1,53 @@
 export const API_URL = 'https://lacapi.eztrak.net/api';
 
-export const assetSimpleRenderer: any = {
-  type: 'simple', // autocasts as new SimpleRenderer()
-  symbol: {
-    type: 'simple-marker', // autocasts as new SimpleMarkerSymbol()
-    size: 10,
-    color: 'orange',
-    outline: {
-      // autocasts as new SimpleLineSymbol()
-      width: 0.5,
-      color: 'white',
+const ASSET_TYPE_COLORS = [
+  'red',
+  'blue',
+  'green',
+  'orange',
+  'cyan',
+  'pink',
+  'purple',
+  'gray',
+  'DarkRed',
+  'Yellow',
+  'Gold',
+  'Olive',
+  'Lime',
+  'SteelBlue',
+];
+
+type AssetType = {
+  id: string;
+  name: string;
+};
+
+export const assetTypeRenderer: any = (assetTypes: AssetType[]) => {
+  return {
+    type: 'unique-value',
+    field: 'assetType',
+    defaultSymbol: {
+      type: 'simple-marker',
+      size: 10,
+      color: 'black',
+      outline: {
+        color: 'white',
+      },
     },
-  },
+    uniqueValueInfos: assetTypes.map((assetTypeItem, index) => {
+      return {
+        value: assetTypeItem.name,
+        symbol: {
+          type: 'simple-marker',
+          size: 10,
+          color: ASSET_TYPE_COLORS[index] ?? 'black',
+          outline: {
+            color: 'white',
+          },
+        },
+      };
+    }),
+  };
 };
 
 export const assetConditionRenderer: any = {
@@ -27,22 +63,12 @@ export const assetConditionRenderer: any = {
   },
   uniqueValueInfos: [
     {
-      value: 'Excellent',
-      symbol: {
-        type: 'simple-marker',
-        size: 10,
-        color: '#008000',
-        outline: {
-          color: 'white',
-        },
-      },
-    },
-    {
       value: 'Good',
+      label: 'Good',
       symbol: {
         type: 'simple-marker',
         size: 10,
-        color: '#90EE90',
+        color: 'green',
         outline: {
           color: 'white',
         },
@@ -50,10 +76,11 @@ export const assetConditionRenderer: any = {
     },
     {
       value: 'Fair',
+      label: 'Fair',
       symbol: {
         type: 'simple-marker',
         size: 10,
-        color: '#F0E68C',
+        color: 'orange',
         outline: {
           color: 'white',
         },
@@ -61,22 +88,23 @@ export const assetConditionRenderer: any = {
     },
     {
       value: 'Poor',
-      label: 'Poor, not hazardous',
+      label: 'Poor',
       symbol: {
         type: 'simple-marker',
         size: 10,
-        color: '#FFD700',
+        color: 'red',
         outline: {
           color: 'white',
         },
       },
     },
     {
-      value: 'Hazardous',
+      value: 'Out Of Service',
+      label: 'Out Of Service',
       symbol: {
         type: 'simple-marker',
         size: 10,
-        color: '#FF0000',
+        color: '#6c757d',
         outline: {
           color: 'white',
         },

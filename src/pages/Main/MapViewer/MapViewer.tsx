@@ -15,14 +15,17 @@ import Legend from '@arcgis/core/widgets/Legend';
 import ScaleBar from '@arcgis/core/widgets/ScaleBar';
 import LayerList from '@arcgis/core/widgets/LayerList';
 import Compass from '@arcgis/core/widgets/Compass';
+import Graphic from '@arcgis/core/Graphic';
+import Point from '@arcgis/core/geometry/Point';
+import Query from '@arcgis/core/rest/support/Query';
 import { Feature } from 'geojson';
 
 import GlobalLoader from 'components/GlobalLoader';
-import { fetchAssets, setAssets } from 'store/asset';
+import { fetchAssetTypes, fetchAssets } from 'store/asset';
 import { assetSelector } from 'selectors';
 import { ApiState } from 'types/ApiState';
 import {
-  assetSimpleRenderer,
+  assetTypeRenderer,
   assetConditionRenderer,
   // assetPopupTemplate,
 } from 'consts';
@@ -32,7 +35,7 @@ let tempCreateAssetToggle: boolean = false;
 
 const MapViewer = () => {
   const dispatch = useDispatch<any>();
-  const { assets, service, status } = useSelector(assetSelector);
+  const { assets, assetTypes, service, status } = useSelector(assetSelector);
   const { globalLoading, setGlobalLoading } = useContext(MainContext);
   const mapRef = useRef(null);
   const [mapView, setMapView] = useState<MapView | undefined>(undefined);
@@ -54,59 +57,106 @@ const MapViewer = () => {
   };
 
   const handleAssetDeleted = (event: any) => {
-    console.log(event);
+    if (mapView) {
+      const assetAllLayer = mapView.map.findLayerById(
+        'asset-all-layer',
+      ) as GeoJSONLayer;
+      const query = new Query();
+      query.where = `id = '${event.detail.id}'`;
+      assetAllLayer.queryFeatures(query).then(results => {
+        if (results.features.length > 0) {
+          const deleteFeature = results.features[0];
+          assetAllLayer.applyEdits({
+            deleteFeatures: [deleteFeature],
+          });
+        }
+      });
+      assetTypes.forEach(assetTypeItem => {
+        if (assetTypeItem.name === event.detail.assetType) {
+          const assetTypeLayer = mapView.map.findLayerById(
+            `asset-${assetTypeItem.name}-layer`,
+          ) as GeoJSONLayer;
+          if (assetTypeLayer) {
+            assetTypeLayer.queryFeatures(query).then(results => {
+              if (results.features.length > 0) {
+                const deleteFeature = results.features[0];
+                assetTypeLayer.applyEdits({
+                  deleteFeatures: [deleteFeature],
+                });
+              }
+            });
+          }
+        }
+      });
+    }
   };
 
   const handleAssetUpdated = (event: any) => {
-    console.log(event);
+    if (mapView) {
+      const assetAllLayer = mapView.map.findLayerById(
+        'asset-all-layer',
+      ) as GeoJSONLayer;
+      const query = new Query();
+      query.where = `id = '${event.detail.id}'`;
+      assetAllLayer.queryFeatures(query).then(results => {
+        if (results.features.length > 0) {
+          const updateFeature = results.features[0];
+          updateFeature.attributes = event.detail;
+          assetAllLayer.applyEdits({
+            updateFeatures: [updateFeature],
+          });
+        }
+      });
+      assetTypes.forEach(assetTypeItem => {
+        if (assetTypeItem.name === event.detail.assetType) {
+          const assetTypeLayer = mapView.map.findLayerById(
+            `asset-${assetTypeItem.name}-layer`,
+          ) as GeoJSONLayer;
+          if (assetTypeLayer) {
+            assetTypeLayer.queryFeatures(query).then(results => {
+              if (results.features.length > 0) {
+                const updateFeature = results.features[0];
+                updateFeature.attributes = event.detail;
+                assetTypeLayer.applyEdits({
+                  updateFeatures: [updateFeature],
+                });
+              }
+            });
+          }
+        }
+      });
+    }
   };
 
   const handleAssetCreated = (event: any) => {
-    dispatch(setAssets([...assets, event.detail]));
+    const addFeature = new Graphic({
+      geometry: new Point({
+        longitude: event.detail.longitude,
+        latitude: event.detail.latitude,
+      }),
+      attributes: event.detail,
+    });
     if (mapView) {
-      // find layer
-      // create new feature
-      // add new feature to layer
-      // const assetAllLayer = mapView.map.findLayerById('asset-all-layer');
-      // 'esri/widgets/Feature';
-      // "@arcgis/core/widgets/Feature.js"
-      // // Create graphic
-      // let graphic = new Graphic({
-      //   geometry: view.center,
-      //   popupTemplate: {
-      //     content: [
-      //       {
-      //         // add popupTemplate content
-      //       },
-      //     ],
-      //   },
-      // });
-      // // map and spatialReference must be set for Arcade
-      // // expressions to execute and display content
-      // let feature = new Feature({
-      //   graphic: graphic,
-      //   map: map,
-      //   spatialReference: spatialReference,
-      // });
-      // const attributes = {};
-      // attributes['Description'] = 'This is the description';
-      // attributes['Address'] = '380 New York St';
-      // // Date.now() returns number of milliseconds elapsed
-      // // since 1 January 1970 00:00:00 UTC.
-      // attributes['Report_Date'] = Date.now();
-      // const addFeature = new Graphic({
-      //   geometry: geometry,
-      //   attributes: attributes,
-      // });
-      // const deleteFeature = {
-      //   objectId: [467],
-      // };
-      // if (assetAllLayer) {
-      //   assetAllLayer.applyEdits({
-      //     addFeatures: [addFeature],
-      //     // deleteFeatures: [deleteFeature],
-      //   });
-      // }
+      const assetAllLayer = mapView.map.findLayerById(
+        'asset-all-layer',
+      ) as GeoJSONLayer;
+      if (assetAllLayer) {
+        assetAllLayer.applyEdits({
+          addFeatures: [addFeature],
+        });
+      }
+      assetTypes.forEach(assetTypeItem => {
+        if (assetTypeItem.name === event.detail.assetType) {
+          const assetTypeLayer = mapView.map.findLayerById(
+            `asset-${assetTypeItem.name}-layer`,
+          ) as GeoJSONLayer;
+          if (assetTypeLayer) {
+            assetTypeLayer.applyEdits({
+              addFeatures: [addFeature],
+            });
+          }
+        }
+      });
     }
   };
 
@@ -130,14 +180,6 @@ const MapViewer = () => {
 
   const handleMapViewClick = (event: __esri.ViewClickEvent) => {
     if (tempCreateAssetToggle) {
-      const customEvent = new CustomEvent('createAssetModal', {
-        detail: {
-          lat: event.mapPoint.latitude,
-          lng: event.mapPoint.longitude,
-        },
-      });
-      window.dispatchEvent(customEvent);
-      setCreateAssetToggle(false);
       // dispatch(
       //   setNewLoaction({
       //     longitude: event.mapPoint.longitude,
@@ -145,6 +187,14 @@ const MapViewer = () => {
       //   }),
       // );
       // setModalView('createAsset');
+      setCreateAssetToggle(false);
+      const customEvent = new CustomEvent('createAssetModal', {
+        detail: {
+          lat: event.mapPoint.latitude,
+          lng: event.mapPoint.longitude,
+        },
+      });
+      window.dispatchEvent(customEvent);
     } else {
       const screenPoint = {
         x: event.x,
@@ -249,6 +299,15 @@ const MapViewer = () => {
       allFeatures.push(newFeature);
     });
 
+    const assetGroupLayer = new GroupLayer({
+      id: 'asset-group-layer',
+      title: 'Assets',
+      visible: true,
+      visibilityMode: 'exclusive',
+      layers: [],
+      opacity: 1,
+    });
+
     const assetAllLayer = new GeoJSONLayer({
       id: 'asset-all-layer',
       url: URL.createObjectURL(
@@ -264,68 +323,42 @@ const MapViewer = () => {
           },
         ),
       ),
-      title: 'Assets All',
-      renderer: assetSimpleRenderer,
+      title: `All Assets (${allFeatures.length})`,
+      renderer: assetTypeRenderer(assetTypes),
       outFields: ['*'],
       // popupTemplate: assetPopupTemplate,
+      editingEnabled: true,
     });
 
-    const stopLayer = new GeoJSONLayer({
-      id: 'asset-stop-layer',
-      url: URL.createObjectURL(
-        new Blob(
-          [
-            JSON.stringify({
-              type: 'FeatureCollection',
-              features: allFeatures.filter(
-                feature => feature.properties?.assetType === 'Stop Sign',
-              ),
-            }),
-          ],
-          {
-            type: 'application/json',
-          },
+    assetTypes.forEach(assetTypeItem => {
+      const filterFeatures = allFeatures.filter(
+        feature => feature.properties?.assetType === assetTypeItem.name,
+      );
+      const assetTypeLayer = new GeoJSONLayer({
+        id: `asset-${assetTypeItem.name}-layer`,
+        url: URL.createObjectURL(
+          new Blob(
+            [
+              JSON.stringify({
+                type: 'FeatureCollection',
+                features: filterFeatures,
+              }),
+            ],
+            {
+              type: 'application/json',
+            },
+          ),
         ),
-      ),
-      title: 'Stop Sign',
-      renderer: assetConditionRenderer,
-      outFields: ['*'],
-      // popupTemplate: assetPopupTemplate,
+        title: `${assetTypeItem.name} (${filterFeatures.length})`,
+        renderer: assetConditionRenderer,
+        outFields: ['*'],
+        editingEnabled: true,
+      });
+      assetGroupLayer.layers.add(assetTypeLayer);
     });
-
-    const schoolLayer = new GeoJSONLayer({
-      id: 'asset-school-layer',
-      url: URL.createObjectURL(
-        new Blob(
-          [
-            JSON.stringify({
-              type: 'FeatureCollection',
-              features: allFeatures.filter(
-                feature => feature.properties?.assetType === 'School Sign',
-              ),
-            }),
-          ],
-          {
-            type: 'application/json',
-          },
-        ),
-      ),
-      title: 'School Sign',
-      renderer: assetConditionRenderer,
-      outFields: ['*'],
-      // popupTemplate: assetPopupTemplate,
-    });
-
-    const assetGroupLayer = new GroupLayer({
-      id: 'asset-group-layer',
-      title: 'Assets',
-      visible: true,
-      visibilityMode: 'exclusive',
-      layers: [schoolLayer, stopLayer, assetAllLayer],
-      opacity: 1,
-    });
-
+    assetGroupLayer.layers.add(assetAllLayer);
     mapView?.map.add(assetGroupLayer);
+
     assetAllLayer.load().then(() => {
       setGlobalLoading(false);
       if (mapView) {
@@ -347,6 +380,7 @@ const MapViewer = () => {
 
   useEffect(() => {
     setGlobalLoading(true);
+    dispatch(fetchAssetTypes());
     loadMap();
 
     window.addEventListener('assetCreated', handleAssetCreated);
