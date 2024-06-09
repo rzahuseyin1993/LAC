@@ -72,20 +72,18 @@ const MapViewer = () => {
         }
       });
       assetTypes.forEach(assetTypeItem => {
-        if (assetTypeItem.name === event.detail.assetType) {
-          const assetTypeLayer = mapView.map.findLayerById(
-            `asset-${assetTypeItem.name}-layer`,
-          ) as GeoJSONLayer;
-          if (assetTypeLayer) {
-            assetTypeLayer.queryFeatures(query).then(results => {
-              if (results.features.length > 0) {
-                const deleteFeature = results.features[0];
-                assetTypeLayer.applyEdits({
-                  deleteFeatures: [deleteFeature],
-                });
-              }
-            });
-          }
+        const assetTypeLayer = mapView.map.findLayerById(
+          `asset-${assetTypeItem.name}-layer`,
+        ) as GeoJSONLayer;
+        if (assetTypeLayer) {
+          assetTypeLayer.queryFeatures(query).then(results => {
+            if (results.features.length > 0) {
+              const deleteFeature = results.features[0];
+              assetTypeLayer.applyEdits({
+                deleteFeatures: [deleteFeature],
+              });
+            }
+          });
         }
       });
     }
@@ -101,26 +99,52 @@ const MapViewer = () => {
       assetAllLayer.queryFeatures(query).then(results => {
         if (results.features.length > 0) {
           const updateFeature = results.features[0];
+          const oldAssetType = updateFeature.attributes.assetType;
           updateFeature.attributes = event.detail;
           assetAllLayer.applyEdits({
             updateFeatures: [updateFeature],
           });
-        }
-      });
-      assetTypes.forEach(assetTypeItem => {
-        if (assetTypeItem.name === event.detail.assetType) {
-          const assetTypeLayer = mapView.map.findLayerById(
-            `asset-${assetTypeItem.name}-layer`,
-          ) as GeoJSONLayer;
-          if (assetTypeLayer) {
-            assetTypeLayer.queryFeatures(query).then(results => {
-              if (results.features.length > 0) {
-                const updateFeature = results.features[0];
-                updateFeature.attributes = event.detail;
-                assetTypeLayer.applyEdits({
-                  updateFeatures: [updateFeature],
-                });
-              }
+          if (oldAssetType === event.detail.assetType) {
+            const selectLayer = mapView.map.findLayerById(
+              `asset-${oldAssetType}-layer`,
+            ) as GeoJSONLayer;
+            if (selectLayer) {
+              selectLayer.queryFeatures(query).then(results => {
+                if (results.features.length > 0) {
+                  const updateFeature = results.features[0];
+                  updateFeature.attributes = event.detail;
+                  selectLayer.applyEdits({
+                    updateFeatures: [updateFeature],
+                  });
+                }
+              });
+            }
+          } else {
+            const oldLayer = mapView.map.findLayerById(
+              `asset-${oldAssetType}-layer`,
+            ) as GeoJSONLayer;
+            if (oldLayer) {
+              oldLayer.queryFeatures(query).then(results => {
+                if (results.features.length > 0) {
+                  const deleteFeature = results.features[0];
+                  oldLayer.applyEdits({
+                    deleteFeatures: [deleteFeature],
+                  });
+                }
+              });
+            }
+            const newLayer = mapView.map.findLayerById(
+              `asset-${event.detail.assetType}-layer`,
+            ) as GeoJSONLayer;
+            const addFeature = new Graphic({
+              geometry: new Point({
+                longitude: event.detail.longitude,
+                latitude: event.detail.latitude,
+              }),
+              attributes: event.detail,
+            });
+            newLayer.applyEdits({
+              addFeatures: [addFeature],
             });
           }
         }
