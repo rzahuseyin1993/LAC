@@ -36,7 +36,8 @@ let tempCreateAssetToggle: boolean = false;
 const MapViewer = () => {
   const dispatch = useDispatch<any>();
   const { assets, assetTypes, service, status } = useSelector(assetSelector);
-  const { globalLoading, setGlobalLoading } = useContext(MainContext);
+  const { globalLoading, setGlobalLoading, setNotification } =
+    useContext(MainContext);
   const mapRef = useRef(null);
   const [mapView, setMapView] = useState<MapView | undefined>(undefined);
   const [isCreateAssetToggle, setCreateAssetToggle] = useState<boolean>(false);
@@ -57,6 +58,10 @@ const MapViewer = () => {
   };
 
   const handleAssetDeleted = (event: any) => {
+    setNotification({
+      type: 'success',
+      message: 'Deleted successfully.',
+    });
     if (mapView) {
       const assetAllLayer = mapView.map.findLayerById(
         'asset-all-layer',
@@ -90,6 +95,10 @@ const MapViewer = () => {
   };
 
   const handleAssetUpdated = (event: any) => {
+    setNotification({
+      type: 'success',
+      message: 'Updated successfully.',
+    });
     if (mapView) {
       const assetAllLayer = mapView.map.findLayerById(
         'asset-all-layer',
@@ -153,6 +162,10 @@ const MapViewer = () => {
   };
 
   const handleAssetCreated = (event: any) => {
+    setNotification({
+      type: 'success',
+      message: 'Created a new asset successfully.',
+    });
     const addFeature = new Graphic({
       geometry: new Point({
         longitude: event.detail.longitude,
