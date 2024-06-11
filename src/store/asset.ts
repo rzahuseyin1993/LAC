@@ -9,7 +9,7 @@ import {
 import { ApiState } from 'types/ApiState';
 import { Asset } from 'types/asset/Asset';
 import { AssetState } from 'types/asset/AssetState';
-import { validateLngLat } from 'utils/validate';
+// import { validateLngLat } from 'utils/validate';
 
 export const initialState: AssetState = {
   assets: [],
@@ -23,11 +23,11 @@ export const initialState: AssetState = {
 
 export const fetchAssets = createAsyncThunk('Asset/fetchAssets', async () => {
   const response: any = await fetchAssetsApi();
-  const originAssets: Asset[] = response;
-  const newAssets = originAssets.filter(assetItem =>
-    validateLngLat(assetItem.longitude, assetItem.latitude),
-  );
-  return newAssets;
+  // const originAssets: Asset[] = response;
+  // const newAssets = originAssets.filter(assetItem =>
+  //   validateLngLat(assetItem.longitude, assetItem.latitude),
+  // );
+  return response;
 });
 
 export const fetchConditions = createAsyncThunk(
