@@ -40,6 +40,7 @@ const MapViewer = () => {
     useContext(MainContext);
   const mapRef = useRef(null);
   const [mapView, setMapView] = useState<MapView | undefined>(undefined);
+  const [isMapLoaded, setMapLoaded] = useState<boolean>(false);
   const [isCreateAssetToggle, setCreateAssetToggle] = useState<boolean>(false);
 
   useEffect(() => {
@@ -255,73 +256,6 @@ const MapViewer = () => {
     }
   };
 
-  const loadMap = () => {
-    if (mapRef.current) {
-      const webmap = new Map({
-        basemap: 'satellite',
-      });
-      const view = new MapView({
-        container: mapRef.current, // The id or node representing the DOM element containing the view.
-        map: webmap, // An instance of a Map object to display in the view.
-        center: [-118.2469873, 34.0479217],
-        // scale: 10000000, // Represents the map scale at the center of the view.
-        zoom: 6,
-        spatialReference: {
-          wkid: 3857,
-        },
-        ui: {
-          components: [],
-        },
-      });
-      const zoom = new Zoom({
-        view: view,
-      });
-      const home = new Home({
-        view: view,
-        goToOverride: view => {
-          const assetAllLayer = view.map.findLayerById('asset-all-layer');
-          if (assetAllLayer) {
-            view.goTo(assetAllLayer.fullExtent);
-          }
-        },
-      });
-      const compass = new Compass({
-        view: view,
-      });
-      const basemapGallery = new BasemapGallery({
-        view: view,
-        container: document.createElement('div'),
-      });
-      const bgExpand = new Expand({
-        view: view,
-        content: basemapGallery,
-        icon: 'basemap',
-        expandTooltip: 'Base Map',
-      });
-      const search = new Search({ view: view, icon: 'search' });
-      const legend = new Legend({ view: view });
-      const scaleBar = new ScaleBar({ view: view });
-      const layerList = new LayerList({
-        view: view,
-      });
-      const layerListExpand = new Expand({
-        view: view,
-        content: layerList,
-        icon: 'layers',
-        expandTooltip: 'Layers',
-      });
-      view.ui.add([search, zoom, home, compass], { position: 'top-right' });
-      view.ui.add(legend, { position: 'bottom-left' });
-      view.ui.add(scaleBar, { position: 'bottom-right' });
-      view.ui.add([bgExpand, layerListExpand], { position: 'top-left' });
-
-      view.when(() => {
-        setMapView(view);
-        dispatch(fetchAssets());
-      });
-    }
-  };
-
   const loadAssetGroupLayer = () => {
     const allFeatures: Feature[] = [];
     assets.forEach(assetItem => {
@@ -407,18 +341,91 @@ const MapViewer = () => {
     });
   };
 
+  const loadMap = () => {
+    if (mapRef.current) {
+      const webmap = new Map({
+        basemap: 'satellite',
+      });
+      const view = new MapView({
+        container: mapRef.current, // The id or node representing the DOM element containing the view.
+        map: webmap, // An instance of a Map object to display in the view.
+        center: [-118.2469873, 34.0479217],
+        // scale: 10000000, // Represents the map scale at the center of the view.
+        zoom: 6,
+        spatialReference: {
+          wkid: 3857,
+        },
+        ui: {
+          components: [],
+        },
+      });
+      const zoom = new Zoom({
+        view: view,
+      });
+      const home = new Home({
+        view: view,
+        goToOverride: view => {
+          const assetAllLayer = view.map.findLayerById('asset-all-layer');
+          if (assetAllLayer) {
+            view.goTo(assetAllLayer.fullExtent);
+          }
+        },
+      });
+      const compass = new Compass({
+        view: view,
+      });
+      const basemapGallery = new BasemapGallery({
+        view: view,
+        container: document.createElement('div'),
+      });
+      const bgExpand = new Expand({
+        view: view,
+        content: basemapGallery,
+        icon: 'basemap',
+        expandTooltip: 'Base Map',
+      });
+      const search = new Search({ view: view, icon: 'search' });
+      const legend = new Legend({ view: view });
+      const scaleBar = new ScaleBar({ view: view });
+      const layerList = new LayerList({
+        view: view,
+      });
+      const layerListExpand = new Expand({
+        view: view,
+        content: layerList,
+        icon: 'layers',
+        expandTooltip: 'Layers',
+      });
+      view.ui.add([search, zoom, home, compass], { position: 'top-right' });
+      view.ui.add(legend, { position: 'bottom-left' });
+      view.ui.add(scaleBar, { position: 'bottom-right' });
+      view.ui.add([bgExpand, layerListExpand], { position: 'top-left' });
+
+      view.when(() => {
+        setMapView(view);
+        setMapLoaded(true);
+      });
+    }
+  };
+
   useEffect(() => {
-    if (mapView && service === 'fetchAssets') {
+    setTimeout(() => {
+      loadAssetGroupLayer();
+    }, 500);
+  }, [isMapLoaded]);
+
+  useEffect(() => {
+    if (service === 'fetchAssets') {
       if (status === ApiState.fulfilled) {
-        loadAssetGroupLayer();
+        loadMap();
       }
     }
-  }, [mapView, service, status]);
+  }, [service, status]);
 
   useEffect(() => {
     setGlobalLoading(true);
     dispatch(fetchAssetTypes());
-    loadMap();
+    dispatch(fetchAssets());
 
     window.addEventListener('assetCreated', handleAssetCreated);
     window.addEventListener('assetUpdated', handleAssetUpdated);

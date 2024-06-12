@@ -64,7 +64,6 @@ export const assetConditionRenderer: any = {
   uniqueValueInfos: [
     {
       value: 'Good',
-      label: 'Good',
       symbol: {
         type: 'simple-marker',
         size: 10,
@@ -76,7 +75,6 @@ export const assetConditionRenderer: any = {
     },
     {
       value: 'Fair',
-      label: 'Fair',
       symbol: {
         type: 'simple-marker',
         size: 10,
@@ -88,7 +86,6 @@ export const assetConditionRenderer: any = {
     },
     {
       value: 'Poor',
-      label: 'Poor',
       symbol: {
         type: 'simple-marker',
         size: 10,
@@ -100,7 +97,6 @@ export const assetConditionRenderer: any = {
     },
     {
       value: 'Out Of Service',
-      label: 'Out Of Service',
       symbol: {
         type: 'simple-marker',
         size: 10,
